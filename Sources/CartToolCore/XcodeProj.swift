@@ -10,28 +10,34 @@ import xcproj
 
 /**
  This is intended to be executed as a Run Script build phase in Xcode.
- Extracts the list of frameworks from the Link Binary with Libraries build phase of the current target.
+ Extracts the list of frameworks from the compiled app using otool.
  Searches for each framework in FRAMEWORK_SEARCH_PATHS.
  Sets up input and output environment variables for each framework, and invokes `carthage copy-frameworks`.
  
  throws: String error if carthage is not installed or an expected environment variable is missing.
  */
-func wrapCarthageCopyFrameworks() throws {
+func wrapCarthageCopyFrameworks(platform: String?) throws {
+    guard let platform = platform else { throw "platform not specified for copy-frameworks" }
     guard ishell("which", "carthage") == 0 else {
         throw "carthage executable not found"
     }
     
-    let xcodeProjPath = try getEnv("PROJECT_FILE_PATH")
-    let targetName = try getEnv("TARGET_NAME")
     let builtProductsDir = try getEnv("BUILT_PRODUCTS_DIR")
     let frameworksFolderPath = try getEnv("FRAMEWORKS_FOLDER_PATH")
-    
-    let carthageFrameworks = try getCarthageFrameworks(target: targetName, xcodeprojFolder: xcodeProjPath)
-    
+    let projectPath = try getEnv("PROJECT_DIR")
+    let executableName = try getEnv("EXECUTABLE_NAME")
+    let appName = executableName + ".app"
+    let appPath = Path(builtProductsDir)
+        .pathByAppending(component: appName)
+        .pathByAppending(component: executableName)
+    let frameworksPath = Path(projectPath)
+        .pathByAppending(component: "Carthage/Build")
+        .pathByAppending(component: platform)
     let frameworksTargetDir = Path(builtProductsDir).pathByAppending(component: frameworksFolderPath)
     
-    let inputs = try resolve(frameworks: carthageFrameworks)
-    let outputs = carthageFrameworks.map {
+    let dependencies = Set(getDependencies(appPath: appPath, frameworksPath: frameworksPath))
+    let inputs = try resolve(frameworks: Array(dependencies))
+    let outputs = dependencies.map {
         frameworksTargetDir.pathByAppending(component: $0).absolute
     }
     
@@ -54,6 +60,31 @@ func wrapCarthageCopyFrameworks() throws {
     try shell(env: env, "carthage", "copy-frameworks")
 }
 
+private func getDependencies(appPath: Path, frameworksPath: Path) -> [String] {
+    var frameworksToProcess = otool(path: appPath)
+    var alreadyProcessed: Set<String> = []
+    var allFrameworks = frameworksToProcess
+    let fm = FileManager.default
+    
+    while !frameworksToProcess.isEmpty {
+        guard let next = frameworksToProcess.popLast() else { break }
+        guard !alreadyProcessed.contains(next) else { continue }
+        
+        let nextPath = frameworksPath.pathByAppending(component: next)
+        guard fm.fileExists(atPath: nextPath.absolute) else {
+            allFrameworks.removeAll { $0 == next }
+            continue
+        }
+        
+        alreadyProcessed.insert(next)
+        let newFrameworks = otool(path: nextPath)
+        frameworksToProcess += newFrameworks
+        allFrameworks += newFrameworks
+    }
+    
+    return allFrameworks
+}
+
 private func otool(path: Path) -> [String] {
     do {
         let output = try shellOutput("otool", "-L", path.absolute)
@@ -74,56 +105,6 @@ private func otool(path: Path) -> [String] {
 
 private func frameworkNames(from paths: [Path]) -> [String] {
     return paths.compactMap { $0.baseName.components(separatedBy: ".").first }
-}
-
-/**
- Return the frameworks from the Link Binary with Libraries build phase of a given target.
- The frameworks are filtered based on a source tree type of Source Root, and the
- presense of "Carthage/Build" in the path.
- 
- - parameter target: The name of the current target
- - parameter xcodeprojFolder: The path to the <project>.xcodeproj folder
- - throws: String error if something goes wrong while traversing objects in the project
- - returns: Array of framework names (without paths)
- */
-internal func getCarthageFrameworks(target targetName: String, xcodeprojFolder: String) throws -> [String] {
-    let project = try XcodeProj(pathString: xcodeprojFolder)
-    let objects = project.pbxproj.objects
-    let targets = objects.targets(named: targetName)
-    guard targets.count == 1, let target = targets.first else {
-        throw "Project does not contain exactly one target named \(targetName)"
-    }
-
-    let frameworkPhasesIds: [String] = target.object.buildPhases.filter { phaseId in
-        return objects.frameworksBuildPhases.contains(reference: phaseId)
-    }
-    
-    guard frameworkPhasesIds.count == 1, let frameworkPhaseId = frameworkPhasesIds.first else {
-        throw "Target \(targetName) does not contain exactly one Frameworks build phase"
-    }
-
-    guard let frameworkPhase: PBXFrameworksBuildPhase = objects.frameworksBuildPhases[frameworkPhaseId] else {
-        throw "Target \(targetName) has frameworks build phase \(frameworkPhasesIds) but no such phase exists"
-    }
-    
-    let fileRefs: [PBXFileReference] = try frameworkPhase.files.map { fileId in
-        guard let refId = objects.buildFiles[fileId]?.fileRef else {
-            throw "No file ref for fileId \(fileId)"
-        }
-        guard let fileRef = objects.getFileElement(reference: refId) as? PBXFileReference else {
-            throw "Missing fileRef or invalid type for file ref Id \(refId)"
-        }
-        return fileRef
-    }
-    
-    let filtered: [String] = fileRefs.compactMap { fileRef in
-        guard fileRef.sourceTree == .sourceRoot || fileRef.sourceTree == .group else { return nil }
-        guard let name = fileRef.name else { return nil }
-        guard let path = fileRef.path else { return nil }
-        guard path.contains("Carthage/Build") else { return nil }
-        return name
-    }
-    return filtered
 }
 
 /**

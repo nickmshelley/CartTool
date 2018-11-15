@@ -35,7 +35,10 @@ public final class CartTool {
             let workspaceRepos = mkworkspaceParser.add(positional: "repos", kind: [String].self, optional: true)
             
             _ = parser.add(subparser: "list", overview: "List dependencies.")
-            _ = parser.add(subparser: "copy-frameworks", overview: "Used as an Xcode Run Script.")
+            
+            let copyFrameworksParser = parser.add(subparser: "copy-frameworks", overview: "Used as an Xcode Run Script.")
+            let platform = copyFrameworksParser.add(option: "--platform", kind: String.self, usage: "Platform being built (iOS, watchOS, tvOS, macOS)")
+            
             _ = parser.add(subparser: "version", overview: "Prints the current version number of carttool.")
             
             let args = Array(CommandLine.arguments.dropFirst())
@@ -48,7 +51,7 @@ public final class CartTool {
             
             switch subcommand {
             case "copy-frameworks":
-                try wrapCarthageCopyFrameworks()
+                try wrapCarthageCopyFrameworks(platform: result.get(platform))
             case "list":
                 try printRepoList()
             case "checkout":

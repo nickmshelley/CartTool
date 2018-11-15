@@ -46,15 +46,6 @@ git "http://stash01.test.com/scm/mif/acapikit.git" "f2625df41ff4b0f33d9d21e3ba41
         XCTAssertEqual("https://github.com/utahiosmac/Marshal.git", entries[0].remoteURL)
     }
     
-    func testProjectParsing() throws {
-        let thisFile = Path(#file)
-        let projectFile = thisFile.parent.parent.pathByAppending(component: "Resources/TestProject.xcodeproj").absolute
-        
-        let carthageFrameworks = try getCarthageFrameworks(target: "TestProject", xcodeprojFolder: projectFile)
-        
-        XCTAssertEqual(3, carthageFrameworks.count)
-    }
-    
     func testWorkspaceParsing() throws {
         let thisFile = Path(#file)
         let workspaceFile = thisFile.parent.parent.pathByAppending(component: "Resources/FacebookSDK.xcworkspace").absolute
