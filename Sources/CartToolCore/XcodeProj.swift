@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import xcproj
 
 /**
  This is intended to be executed as a Run Script build phase in Xcode.
