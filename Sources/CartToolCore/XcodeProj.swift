@@ -52,56 +52,6 @@ func wrapCarthageCopyFrameworks() throws {
     env["SCRIPT_OUTPUT_FILE_COUNT"] = countString
     
     try shell(env: env, "carthage", "copy-frameworks")
-    
-    try wrapVerifyDependencies()
-}
-
-/**
- This is run as part of `carttool copy-frameworks` and should only be used as a separate build phase if the former is not used.
- Recursively runs `otool -L` on the app and all dependent frameworks.
- Verifies that all transitive dependencies are explicitly included as app dependent frameworks.
- 
- throws: String error if a dependency is missing or an expected environment variable is missing.
- */
-func wrapVerifyDependencies() throws {
-    let builtProductsDir = try getEnv("BUILT_PRODUCTS_DIR")
-    let frameworksFolderPath = try getEnv("FRAMEWORKS_FOLDER_PATH")
-    let appPath = Path(builtProductsDir).pathByAppending(component: frameworksFolderPath).parent.absolute
-    
-    try verifyDependencies(appPath: Path(appPath))
-}
-
-internal func verifyDependencies(appPath: Path) throws {
-    print("Verifying dependencies...")
-    
-    guard let appName = appPath.baseName.components(separatedBy: ".").first else { throw "Invalid app path." }
-    
-    let frameworksPath = appPath.pathByAppending(component: "Frameworks")
-    
-    var frameworksToProcess = otool(path: appPath.pathByAppending(component: appName))
-    var alreadyProcessed: Set<String> = []
-    var allFrameworks = frameworksToProcess
-    
-    while !frameworksToProcess.isEmpty {
-        guard let next = frameworksToProcess.popLast() else { break }
-        guard !alreadyProcessed.contains(next) else { continue }
-        
-        alreadyProcessed.insert(next)
-        let newFrameworks = otool(path: frameworksPath.pathByAppending(component: next))
-        frameworksToProcess += newFrameworks
-        allFrameworks += newFrameworks
-    }
-    
-    let actualFrameworks = try! FileManager.default.contentsOfDirectory(atPath: frameworksPath.absolute)
-    let actualNames = Set(frameworkNames(from: actualFrameworks.map { Path($0) }))
-    let expectedNames = Set(frameworkNames(from: allFrameworks.map { Path($0) }))
-    
-    let remaining = expectedNames.subtracting(actualNames)
-    if remaining.isEmpty {
-        print("Dependencies check out. Nothing to see here.")
-    } else {
-        throw "Missing dependent framework(s): " + remaining.joined(separator: ", ")
-    }
 }
 
 private func otool(path: Path) -> [String] {

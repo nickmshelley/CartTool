@@ -55,17 +55,6 @@ git "http://stash01.test.com/scm/mif/acapikit.git" "f2625df41ff4b0f33d9d21e3ba41
         XCTAssertEqual(3, carthageFrameworks.count)
     }
     
-    func testVerifyFrameworks() {
-        let thisFile = Path(#file)
-        let success = thisFile.parent.parent.pathByAppending(component: "Resources/TestFrameworkSuccess.app")
-        let fail = thisFile.parent.parent.pathByAppending(component: "Resources/TestFrameworkFail.app")
-        
-        XCTAssertNoThrow(try verifyDependencies(appPath: success))
-        XCTAssertThrowsError(try verifyDependencies(appPath: fail)) { error in
-            guard "\(error)".contains("Bolts") else { return XCTFail() }
-        }
-    }
-    
     func testWorkspaceParsing() throws {
         let thisFile = Path(#file)
         let workspaceFile = thisFile.parent.parent.pathByAppending(component: "Resources/FacebookSDK.xcworkspace").absolute
@@ -83,8 +72,6 @@ git "http://stash01.test.com/scm/mif/acapikit.git" "f2625df41ff4b0f33d9d21e3ba41
         XCTAssertEqual(ra[1], "/Users/foo/code/IOS Project/Source/Carthage/Build/iOS")
     }
 }
-
-
 
 func unwrap<T>(_ opt: Optional<T>) throws -> T {
     guard let value = opt else { throw "Expected .some" }
