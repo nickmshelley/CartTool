@@ -157,26 +157,3 @@ internal func resolve(frameworks: [String]) throws -> [String] {
         throw "Unable to find \(framework) in FRAMEWORK_SEARCH_PATHS"
     }
 }
-
-internal func extractProjectsFrom(xcworkspacePath: String) throws -> [String] {
-    let workspace = try XCWorkspace(pathString: xcworkspacePath).data
-    var projects: [String] = []
-    let refs = workspace.children
-    
-    for ref in refs {
-        switch ref {
-        case .file(let file):
-            let pathStr = file.location.path
-            if pathStr.hasSuffix(".xcodeproj") &&
-                !pathStr.contains("Carthage/Checkouts") { // ignore the project's dependencies
-                let workspaceParentFolder = Path(xcworkspacePath).parent
-                projects.append(workspaceParentFolder.pathByAppending(component: pathStr).absolute)
-            }
-        default:
-            break
-        }
-    }
-    
-    return projects
-}
-

@@ -45,15 +45,7 @@ git "http://stash01.test.com/scm/mif/acapikit.git" "f2625df41ff4b0f33d9d21e3ba41
         XCTAssertNotNil(URL(string: entries[0].remoteURL))
         XCTAssertEqual("https://github.com/utahiosmac/Marshal.git", entries[0].remoteURL)
     }
-    
-    func testWorkspaceParsing() throws {
-        let thisFile = Path(#file)
-        let workspaceFile = thisFile.parent.parent.pathByAppending(component: "Resources/FacebookSDK.xcworkspace").absolute
-        
-        let projects = try extractProjectsFrom(xcworkspacePath: workspaceFile)
-        XCTAssertEqual(6, projects.count)
-    }
-    
+            
     func testEnvVarSplitter() {
         let escapedValue = "/Users/foo/Library/DerivedData/Debug-iphonesimulator /Users/foo/code/IOS\\ Project/Source/Carthage/Build/iOS"
         

@@ -276,16 +276,6 @@ public final class CartTool {
         
         var projects: [String] = []
         
-        // first look for a workspace
-        if let workspaceFolder = try fm.contentsOfDirectory(atPath: folder.absolute).first(where: { $0.hasSuffix(".xcworkspace") }) {
-            projects = try extractProjectsFrom(xcworkspacePath: folder.pathByAppending(component: workspaceFolder).absolute)
-                .filter { try projectHasSharedSchemes(projectFolder: Path($0)) }
-        }
-        
-        if projects.count > 0 {
-            return projects
-        }
-        
         for item in try fm.contentsOfDirectory(atPath: folder.absolute) {
             let projectPath = folder.pathByAppending(component: item)
             if try item.hasSuffix(".xcodeproj") && projectHasSharedSchemes(projectFolder: projectPath) {
