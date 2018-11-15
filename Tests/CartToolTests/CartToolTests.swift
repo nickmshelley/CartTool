@@ -49,7 +49,8 @@ git "http://stash01.test.com/scm/mif/acapikit.git" "f2625df41ff4b0f33d9d21e3ba41
     func testEnvVarSplitter() {
         let escapedValue = "/Users/foo/Library/DerivedData/Debug-iphonesimulator /Users/foo/code/IOS\\ Project/Source/Carthage/Build/iOS"
         
-        let ra = splitEnvVar(escapedValue)
+        let tool = CartTool()
+        let ra = tool.splitEnvVar(escapedValue)
         XCTAssertEqual(2, ra.count)
         XCTAssertEqual(ra[0], "/Users/foo/Library/DerivedData/Debug-iphonesimulator")
         XCTAssertEqual(ra[1], "/Users/foo/code/IOS Project/Source/Carthage/Build/iOS")
