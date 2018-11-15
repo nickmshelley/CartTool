@@ -55,6 +55,29 @@ git "http://stash01.test.com/scm/mif/acapikit.git" "f2625df41ff4b0f33d9d21e3ba41
         XCTAssertEqual(ra[0], "/Users/foo/Library/DerivedData/Debug-iphonesimulator")
         XCTAssertEqual(ra[1], "/Users/foo/code/IOS Project/Source/Carthage/Build/iOS")
     }
+    
+    func testCopyFrameworks() {
+        let projectPath = Path(#file).parent.parent.pathByAppending(component: "Resources")
+        let buildPath = projectPath
+        let executableName = "TestFrameworkSuccess"
+        let appPath = buildPath.pathByAppending(component: executableName + ".app")
+        let frameworkPath = appPath.pathByAppending(component: "Frameworks")
+        let frameworkSearchPath = projectPath.pathByAppending(component: "Carthage/Build/iOS")
+
+        setenv("PROJECT_DIR", projectPath.absolute, 1)
+        setenv("BUILT_PRODUCTS_DIR", buildPath.absolute, 1)
+        setenv("TARGET_BUILD_DIR", buildPath.absolute, 1)
+        setenv("FRAMEWORKS_FOLDER_PATH", frameworkPath.absolute, 1)
+        setenv("EXECUTABLE_NAME", executableName, 1)
+        setenv("FRAMEWORK_SEARCH_PATHS", frameworkSearchPath.absolute, 1)
+        setenv("VALID_ARCHS", "i386 x86_64", 1)
+        
+        let path = ProcessInfo.processInfo.environment["PATH"]! + ":/usr/local/bin"
+        setenv("PATH", path, 1)
+        
+        let tool = CartTool()
+        XCTAssertNoThrow(try tool.wrapCarthageCopyFrameworks(platform: "iOS"))
+    }
 }
 
 func unwrap<T>(_ opt: Optional<T>) throws -> T {

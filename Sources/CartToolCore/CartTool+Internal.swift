@@ -60,7 +60,7 @@ extension CartTool {
         try shell(env: env, "carthage", "copy-frameworks")
     }
     
-    private func getDependencies(appPath: Path, frameworksPath: Path) -> [String] {
+    func getDependencies(appPath: Path, frameworksPath: Path) -> [String] {
         var frameworksToProcess = otool(path: appPath)
         var alreadyProcessed: Set<String> = []
         var allFrameworks = frameworksToProcess
